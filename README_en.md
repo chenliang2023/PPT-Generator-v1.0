@@ -2,91 +2,17 @@
 
 [![中文](https://img.shields.io/badge/lang-中文-red)](README.md)
 
-A Codex skill for generating PowerPoint decks. It turns articles, reports, papers, course notes, and other source materials into image-based presentations: first plan the outline and visual style, then generate each full-slide image with Codex's built-in `gpt-image-2`, and finally assemble the images into a `.pptx` file with a local script.
+A Codex skill for generating PowerPoint decks. It can also be used in Claude Code, OpenClaw, Hermes Agent, and other agents that support `SKILL.md`; these non-Codex environments usually require configuring `gpt-image-2` or a third-party OpenAI-compatible image generation API. It turns articles, reports, papers, course notes, and other source materials into image-based presentations: first plan the outline and visual style, then generate each full-slide image, and finally assemble the images into a `.pptx` file with a local script.
 
 ## Features
 
-- Uses Codex's built-in `gpt-image-2` image generation and editing capabilities to create slide images.
+- Uses Codex's built-in image generation and editing capabilities when available; uses the local CLI/API fallback in other agents.
+- Supports multiple agent environments, including Codex, Claude Code, OpenClaw, and Hermes Agent.
+- Supports `gpt-image-2` image models provided by third-party OpenAI-compatible endpoints.
 - Image-based PPT workflow: each slide is a complete 16:9 image, suitable for highly visual presentations.
 - Style reference library: includes clean professional, scientific defense, e-ink magazine, hand-drawn technical explainer, dashboard, and other style directions.
 - Keeps one coherent visual language across the whole deck, while varying layouts by slide semantics to avoid mechanical repetition.
 - Local assembly script: packages `slide_01.png`, `slide_02.png`, and other generated images into a PowerPoint file.
-
-## Project Structure
-
-```text
-codex-ppt-skill/
-├── README.md
-├── README_en.md
-├── LICENSE
-├── assets/
-│   └── style-previews/
-└── skills/
-    └── codex-ppt/
-        ├── SKILL.md
-        ├── requirements.txt
-        ├── scripts/
-        │   └── assemble_ppt.py
-        └── references/
-            ├── 清爽专业风.md
-            ├── 创意杂志风.md
-            ├── 电子墨水杂志风.md
-            ├── 科研答辩风.md
-            ├── 手绘技术解释风.md
-            ├── 数据仪表盘风.md
-            └── ...
-```
-
-## Installation
-
-The recommended path is to ask Codex directly:
-
-```text
-Use skill-installer to install codex-ppt from https://github.com/ningzimu/codex-ppt-skill. The skill path is skills/codex-ppt.
-```
-
-Restart Codex after installation so the new skill is picked up.
-
-If you prefer a manual install, you can run Codex's built-in installer script directly. The skill root in this repository is `skills/codex-ppt`:
-
-```bash
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo ningzimu/codex-ppt-skill \
-  --path skills/codex-ppt
-```
-
-If you are developing this repository locally, you can instead symlink the skill directory into the Codex skills directory:
-
-```bash
-mkdir -p ~/.codex/skills
-ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
-```
-
-## Usage
-
-Ask Codex with a request like:
-
-```text
-Use codex-ppt to turn /path/to/article.md into a roughly 10-slide PPT, with a business-professional style.
-```
-
-The skill follows this workflow:
-
-1. Read the source content and plan the deck outline.
-2. Confirm slide count, slide titles, and key points.
-3. Offer 2-3 visual style options and recommend one for user confirmation.
-4. Generate one sample slide with `gpt-image-2` for approval of style, layout rhythm, and text quality.
-5. Create the PPT project directory.
-6. Generate all slide images one by one with `gpt-image-2`.
-7. Check text readability, style consistency, and content completeness.
-8. Generate `outline.md` and `speech.md`.
-9. Assemble the `.pptx` with `assemble_ppt.py`.
-
-## Usage Tips
-
-- If generated slide images look blurry, especially on text-heavy pages, ask Codex to generate the images at 4K resolution. The default resolution can make small text less clear when a slide contains a lot of text.
-- If you are unhappy with one specific slide's content, layout, colors, or wording, ask Codex to refine that slide in detail instead of regenerating the whole deck.
-- You can also upload a screenshot or reference image of a PPT style you like, and ask Codex to imitate its color palette, layout, typography feel, and visual elements.
 
 ## Output Example
 
@@ -137,6 +63,132 @@ Each PPT is generated into an independent project directory:
 - Create decks for research proposals, midterm reviews, final project acceptance, and thesis defenses.
 - Create business reports, product introductions, and research summaries.
 - Produce image-based presentations that require strong visual consistency.
+
+## Project Structure
+
+```text
+codex-ppt-skill/
+├── README.md
+├── README_en.md
+├── LICENSE
+├── assets/
+│   └── style-previews/
+└── skills/
+    └── codex-ppt/
+        ├── SKILL.md
+        ├── requirements.txt
+        ├── scripts/
+        │   ├── assemble_ppt.py
+        │   ├── codex_ppt_runtime.py
+        │   ├── image_gen.py
+        │   └── remove_chroma_key.py
+        └── references/
+            ├── 清爽专业风.md
+            ├── 创意杂志风.md
+            ├── 电子墨水杂志风.md
+            ├── 科研答辩风.md
+            ├── 手绘技术解释风.md
+            ├── 数据仪表盘风.md
+            └── ...
+```
+
+## Installation
+
+### Codex
+
+The recommended path is to ask Codex directly:
+
+```text
+Use skill-installer to install codex-ppt from https://github.com/ningzimu/codex-ppt-skill. The skill path is skills/codex-ppt.
+```
+
+Restart Codex after installation so the new skill is picked up.
+
+If you prefer a manual install, you can run Codex's built-in installer script directly. The skill root in this repository is `skills/codex-ppt`:
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
+  --repo ningzimu/codex-ppt-skill \
+  --path skills/codex-ppt
+```
+
+If you are developing this repository locally, you can instead symlink the skill directory into the Codex skills directory:
+
+```bash
+mkdir -p ~/.codex/skills
+ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
+```
+
+### Claude Code, OpenClaw, and Hermes Agent
+
+These agents can read `SKILL.md` skills. The recommended path is to ask the current agent directly:
+
+```text
+Install codex-ppt from https://github.com/ningzimu/codex-ppt-skill. The skill path is skills/codex-ppt. Put it into the current agent's skills directory.
+```
+
+Common target directories are `~/.claude/skills/codex-ppt` for Claude Code, `~/.openclaw/skills/codex-ppt` for OpenClaw, and `~/.hermes/skills/codex-ppt` for Hermes Agent.
+
+If you are developing this repository locally, you can use a symlink instead of copying so changes are reflected immediately.
+
+If you use OpenClaw skill allowlists, add `codex-ppt` to the allowed skills.
+
+## Image Model Configuration
+
+You only need to configure an image model when API/CLI fallback image generation is needed. Asking for a specific resolution, higher quality, or edits to one slide does not by itself trigger third-party API configuration; if Codex's built-in image tool is available, it should keep using the built-in tool. Typical cases that require configuration include:
+
+- Using a third-party API or OpenAI-compatible proxy in Codex, where the built-in image generation tool is usually unavailable.
+- Using this skill from Claude Code, OpenClaw, Hermes Agent, or similar agents.
+
+If you use Codex through a GPT subscription and Codex's built-in image generation tool is available, you do not need to configure the `gpt-image-2` image model; in that setup, Codex already provides the image generation capability.
+
+When API/CLI fallback is needed, the agent checks `~/.codex-ppt-skill/.env` before first use. If the API key is missing, the agent should guide you through one-time configuration. `base URL` is only needed when using a third-party proxy, and the model defaults to `gpt-image-2`; change the model only when your proxy requires a custom model name. After that, Codex, Claude Code, OpenClaw, and Hermes Agent reuse the same config.
+
+For manual troubleshooting, you can also run the config command directly:
+
+```bash
+python3 /path/to/codex-ppt-skill/skills/codex-ppt/scripts/codex_ppt_runtime.py config \
+  --api-key "your-api-key" \
+  --model gpt-image-2
+```
+
+`--api-key` is your API key. `--model` is the image model name, and `gpt-image-2` is the default choice. The config is written to `~/.codex-ppt-skill/.env`. Do not write API keys into the project directory or commit them to the repository.
+
+If you use a third-party proxy, add `--base-url`. If the proxy uses a custom model name, replace `--model` with the name provided by that proxy:
+
+```bash
+python3 /path/to/codex-ppt-skill/skills/codex-ppt/scripts/codex_ppt_runtime.py config \
+  --api-key "your-api-key" \
+  --base-url "https://your-openai-compatible-endpoint/v1" \
+  --model openai/gpt-image-2
+```
+
+## Usage
+
+Ask Codex, Claude Code, OpenClaw, or Hermes Agent and explicitly specify the `codex-ppt` skill, for example:
+
+```text
+Use the codex-ppt skill to turn /path/to/article.md into a roughly 10-slide PPT.
+```
+
+The skill follows this workflow:
+
+1. Read the source content and plan the deck outline.
+2. Generate `outline.md` and ask you to confirm slide count, slide titles, and key points.
+3. Offer 2-3 visual style options and recommend one for user confirmation.
+4. State the image generation backend before the first image and ask you to confirm it.
+5. Generate one sample slide with the confirmed image backend for approval of style, layout rhythm, and text quality.
+6. Create the PPT project directory.
+7. Generate all slide images one by one with the same image backend.
+8. Check text readability, style consistency, and content completeness.
+9. Generate `speech.md`.
+10. Assemble the `.pptx` with `assemble_ppt.py`.
+
+## Usage Tips
+
+- The default script resolution is 2K 16:9 landscape. If generated slide images look blurry, especially on text-heavy pages, ask the current agent to generate the images at 4K resolution.
+- If you are unhappy with one specific slide's content, layout, colors, or wording, ask the current agent to refine that slide in detail instead of regenerating the whole deck.
+- You can also upload a screenshot or reference image of a PPT style you like, and ask the current agent to imitate its color palette, layout, typography feel, and visual elements.
 
 ## License
 

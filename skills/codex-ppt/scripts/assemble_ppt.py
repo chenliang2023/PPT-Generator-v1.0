@@ -14,6 +14,25 @@ import tempfile
 from typing import Dict, List, Optional
 
 
+def dependency_hint() -> str:
+    runtime_home = os.path.expanduser(os.environ.get("CODEX_PPT_HOME", "~/.codex-ppt-skill"))
+    python = os.path.join(
+        runtime_home,
+        ".venv",
+        "Scripts" if os.name == "nt" else "bin",
+        "python.exe" if os.name == "nt" else "python",
+    )
+    runtime_script = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "codex_ppt_runtime.py",
+    )
+    return (
+        f"请运行: python3 {runtime_script} bootstrap\n"
+        f"或直接运行: {python} -m pip install -r "
+        f"{os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'requirements.txt')}"
+    )
+
+
 def get_slide_images(ppt_project_dir: str) -> List[str]:
     """
     获取幻灯片图片文件列表，按文件名排序
@@ -175,8 +194,7 @@ def compress_image_if_needed(
 
     except ImportError:
         print("错误：未安装 Pillow 库")
-        print("请运行: python3 -m venv ~/.codex/skills/codex-ppt/.venv")
-        print("然后运行: ~/.codex/skills/codex-ppt/.venv/bin/python -m pip install -r ~/.codex/skills/codex-ppt/requirements.txt")
+        print(dependency_hint())
         return None
     except Exception as e:
         print(f"  警告：图片压缩失败: {e}")
@@ -208,8 +226,7 @@ def create_presentation(
             from pptx.util import Inches
         except ImportError:
             print("错误：未安装 python-pptx 库")
-            print("请运行: python3 -m venv ~/.codex/skills/codex-ppt/.venv")
-            print("然后运行: ~/.codex/skills/codex-ppt/.venv/bin/python -m pip install -r ~/.codex/skills/codex-ppt/requirements.txt")
+            print(dependency_hint())
             return False
 
         # 创建演示文稿

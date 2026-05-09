@@ -37,6 +37,7 @@ ENV/
 
 # Logs
 *.log
+.env
 
 # Generated files
 *.png

@@ -2,91 +2,17 @@
 
 [![English](https://img.shields.io/badge/lang-English-blue)](README_en.md)
 
-一个面向 Codex 的 PPT 生成 skill。它把文章、报告、论文、课程笔记等内容转换成“整页图片式”的演示文稿：先规划大纲和视觉风格，再使用 Codex 内置的 `gpt-image-2` 生成每页幻灯片图片，最后用本地脚本组装为 `.pptx`。
+一个面向 Codex 的 PPT 生成 skill，也可在 Claude Code、OpenClaw、Hermes Agent 等支持 `SKILL.md` 的 agent 中使用；在这些非 Codex 环境中通常需要配置 `gpt-image-2` 或第三方 OpenAI 兼容格式的生图 API。它把文章、报告、论文、课程笔记等内容转换成“整页图片式”的演示文稿：先规划大纲和视觉风格，再生成每页幻灯片图片，最后用本地脚本组装为 `.pptx`。
 
 ## 特点
 
-- 使用 Codex 内置的 `gpt-image-2` 生图和编辑图能力生成每页幻灯片图片
+- 在 Codex 中优先使用内置生图和编辑图能力；在其他 agent 中可使用本地 API/CLI fallback
+- 同时支持 Codex、Claude Code、OpenClaw、Hermes Agent 等多种 agent 环境
+- 支持使用第三方 OpenAI 兼容接口提供的 `gpt-image-2` 生图模型
 - 图片式 PPT：每页幻灯片是一张完整 16:9 图片，适合强视觉表达
 - 风格参考库：内置清爽专业、科研答辩、电子墨水杂志、手绘技术解释、仪表盘等多种风格说明
 - 整套 PPT 保持统一视觉语言，但每页会按内容语义调整版式，避免机械重复
 - 本地组装脚本：将 `slide_01.png`、`slide_02.png` 等图片打包成 PowerPoint
-
-## 目录结构
-
-```text
-codex-ppt-skill/
-├── README.md
-├── README_en.md
-├── LICENSE
-├── assets/
-│   └── style-previews/
-└── skills/
-    └── codex-ppt/
-        ├── SKILL.md
-        ├── requirements.txt
-        ├── scripts/
-        │   └── assemble_ppt.py
-        └── references/
-            ├── 清爽专业风.md
-            ├── 创意杂志风.md
-            ├── 电子墨水杂志风.md
-            ├── 科研答辩风.md
-            ├── 手绘技术解释风.md
-            ├── 数据仪表盘风.md
-            └── ...
-```
-
-## 安装
-
-推荐直接在 Codex 会话中说：
-
-```text
-请使用 skill-installer 从 https://github.com/ningzimu/codex-ppt-skill 安装 codex-ppt，skill 路径是 skills/codex-ppt。
-```
-
-安装完成后，重启 Codex 让新 skill 生效。
-
-如果你想手动安装，也可以直接运行 Codex 内置的安装脚本。这个仓库的 skill 根目录是 `skills/codex-ppt`：
-
-```bash
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo ningzimu/codex-ppt-skill \
-  --path skills/codex-ppt
-```
-
-如果你是在本地开发这个仓库，也可以把 skill 目录链接到 Codex skills 目录：
-
-```bash
-mkdir -p ~/.codex/skills
-ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
-```
-
-## 使用方式
-
-在 Codex 中提出类似请求：
-
-```text
-请使用 codex-ppt 把 /path/to/article.md 做成 10 页左右的 PPT，风格偏商务专业。
-```
-
-skill 会按以下流程执行：
-
-1. 阅读内容并规划 PPT 大纲
-2. 确认页数、标题和每页要点
-3. 给出 2-3 个视觉风格选项，并推荐一个让用户确认
-4. 使用 `gpt-image-2` 生成 1 页样张，让用户确认风格、版式节奏和文字质量
-5. 创建 PPT 项目目录
-6. 使用 `gpt-image-2` 逐页生成全部幻灯片图片
-7. 检查文字清晰度、风格一致性和内容完整性
-8. 生成 `outline.md` 和 `speech.md`
-9. 使用 `assemble_ppt.py` 组装 `.pptx`
-
-## 使用技巧
-
-- 如果生成的幻灯片图片比较模糊，尤其是文字较多的页面，可以让 Codex 改用 4K 分辨率生成图片。默认分辨率在高文字密度页面上可能会导致小字不够清晰。
-- 如果只是不满意某一页的内容、排版、配色或文字表达，可以直接让 Codex 针对这一页做细致修改，不需要整套 PPT 重新生成。
-- 你也可以上传一张喜欢的 PPT 风格截图或参考图，让 Codex 模仿它的配色、版式、字体气质和视觉元素来生成整套 PPT。
 
 ## 生成效果
 
@@ -137,6 +63,132 @@ skill 会按以下流程执行：
 - 科研项目申报、中期检查、结题验收和论文答辩
 - 商业汇报、产品介绍、调研总结
 - 需要强视觉统一性的图片式演示文稿
+
+## 目录结构
+
+```text
+codex-ppt-skill/
+├── README.md
+├── README_en.md
+├── LICENSE
+├── assets/
+│   └── style-previews/
+└── skills/
+    └── codex-ppt/
+        ├── SKILL.md
+        ├── requirements.txt
+        ├── scripts/
+        │   ├── assemble_ppt.py
+        │   ├── codex_ppt_runtime.py
+        │   ├── image_gen.py
+        │   └── remove_chroma_key.py
+        └── references/
+            ├── 清爽专业风.md
+            ├── 创意杂志风.md
+            ├── 电子墨水杂志风.md
+            ├── 科研答辩风.md
+            ├── 手绘技术解释风.md
+            ├── 数据仪表盘风.md
+            └── ...
+```
+
+## 安装
+
+### Codex
+
+推荐直接在 Codex 会话中说：
+
+```text
+请使用 skill-installer 从 https://github.com/ningzimu/codex-ppt-skill 安装 codex-ppt，skill 路径是 skills/codex-ppt。
+```
+
+安装完成后，重启 Codex 让新 skill 生效。
+
+如果你想手动安装，也可以直接运行 Codex 内置的安装脚本。这个仓库的 skill 根目录是 `skills/codex-ppt`：
+
+```bash
+python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
+  --repo ningzimu/codex-ppt-skill \
+  --path skills/codex-ppt
+```
+
+如果你是在本地开发这个仓库，也可以把 skill 目录链接到 Codex skills 目录：
+
+```bash
+mkdir -p ~/.codex/skills
+ln -s /path/to/codex-ppt-skill/skills/codex-ppt ~/.codex/skills/codex-ppt
+```
+
+### Claude Code、OpenClaw、Hermes Agent
+
+这些 agent 都可以读取 `SKILL.md` 形式的 skill。推荐直接在对应 agent 会话中说：
+
+```text
+请从 https://github.com/ningzimu/codex-ppt-skill 安装 codex-ppt，skill 路径是 skills/codex-ppt，并把它放到当前 agent 的 skills 目录下。
+```
+
+常见目标目录是：Claude Code 使用 `~/.claude/skills/codex-ppt`，OpenClaw 使用 `~/.openclaw/skills/codex-ppt`，Hermes Agent 使用 `~/.hermes/skills/codex-ppt`。
+
+如果你是在本地开发这个仓库，也可以用软链接替代复制，方便实时调试修改。
+
+如果使用 OpenClaw 的 skill allowlist，需要把 `codex-ppt` 加入允许列表。
+
+## 生图模型配置
+
+只有在需要通过 API/CLI fallback 生图时，才需要配置生图模型。指定图片分辨率、提高质量或要求修改某一页，本身不会触发第三方 API 配置；如果 Codex 内置图片生成工具可用，会继续使用内置工具。典型需要配置的情况包括：
+
+- 在 Codex 中使用第三方 API 或兼容中转站接入时，通常无法使用内置的图片生成工具。
+- 在 Claude Code、OpenClaw、Hermes Agent 等环境中使用该 skill。
+
+如果你是通过 GPT 会员订阅使用 Codex，并且 Codex 内置图片生成工具可用，则不需要配置 `gpt-image-2` 生图模型；这种情况下 Codex 已经内置了该图片生成能力。
+
+需要 API/CLI fallback 时，agent 会在首次使用前检查 `~/.codex-ppt-skill/.env`。如果缺少 API key，agent 会引导你配置一次；`base URL` 只有使用第三方中转站时才需要配置，模型名缺省为 `gpt-image-2`，只有中转站要求自定义模型名时才需要修改。配置完成后 Codex、Claude Code、OpenClaw、Hermes Agent 会复用同一套配置。
+
+手动排查时也可以直接运行配置命令：
+
+```bash
+python3 /path/to/codex-ppt-skill/skills/codex-ppt/scripts/codex_ppt_runtime.py config \
+  --api-key "your-api-key" \
+  --model gpt-image-2
+```
+
+其中 `--api-key` 是你的 API key；`--model` 是图片模型名，默认可使用 `gpt-image-2`。配置会写入 `~/.codex-ppt-skill/.env`。不要把 API key 写进项目目录或提交到仓库。
+
+如果使用第三方中转站，再加上 `--base-url`。如果中转站使用自定义模型名，就把 `--model` 改成中转站提供的名称：
+
+```bash
+python3 /path/to/codex-ppt-skill/skills/codex-ppt/scripts/codex_ppt_runtime.py config \
+  --api-key "your-api-key" \
+  --base-url "https://your-openai-compatible-endpoint/v1" \
+  --model openai/gpt-image-2
+```
+
+## 使用方式
+
+在 Codex、Claude Code、OpenClaw 或 Hermes Agent 中明确指定使用 `codex-ppt` skill，例如：
+
+```text
+请使用 codex-ppt skill 把 /path/to/article.md 做成 10 页左右的 PPT。
+```
+
+skill 会按以下流程执行：
+
+1. 阅读内容并规划 PPT 大纲
+2. 生成 `outline.md`，并请求你确认页数、标题和每页要点
+3. 给出 2-3 个视觉风格选项，并推荐一个让用户确认
+4. 在首次生图前说明将使用的生图方式，并请求你确认
+5. 使用确认后的图片生成后端生成 1 页样张，让用户确认风格、版式节奏和文字质量
+6. 创建 PPT 项目目录
+7. 使用同一图片生成后端逐页生成全部幻灯片图片
+8. 检查文字清晰度、风格一致性和内容完整性
+9. 生成 `speech.md`
+10. 使用 `assemble_ppt.py` 组装 `.pptx`
+
+## 使用技巧
+
+- 默认脚本分辨率是 2K 16:9 横屏。如果生成的幻灯片图片比较模糊，尤其是文字较多的页面，可以让当前 agent 改用 4K 分辨率生成图片。
+- 如果只是不满意某一页的内容、排版、配色或文字表达，可以直接让当前 agent 针对这一页做细致修改，不需要整套 PPT 重新生成。
+- 你也可以上传一张喜欢的 PPT 风格截图或参考图，让当前 agent 模仿它的配色、版式、字体气质和视觉元素来生成整套 PPT。
 
 ## 许可证
 

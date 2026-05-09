@@ -6,12 +6,19 @@ Release notes are generated from this file. Keep changelog entries in English.
 
 ### Features
 
+- Add third-party OpenAI-compatible image API fallback for codex-ppt. (#6)
+- Add shared runtime configuration for API key, base URL, and image model reuse. (#6)
+- Support Claude Code, OpenClaw, Hermes Agent, and other `SKILL.md`-based agent usage. (#6)
+
 ### Improvements
+
+- Default image fallback generation to 2K 16:9 output. (#6)
 
 ### Fixes
 
 ### Documentation
 
+- Require explicit image backend confirmation before sample generation. (#6)
 - Add agent contribution guidelines for PR, changelog, and release workflows. (#5)
 
 ## 0.1.0
