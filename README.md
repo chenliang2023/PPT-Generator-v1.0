@@ -69,34 +69,6 @@
 - 商业汇报、产品介绍、调研总结
 - 需要强视觉统一性的图片式演示文稿
 
-## 目录结构
-
-```text
-codex-ppt-skill/
-├── README.md
-├── README_en.md
-├── LICENSE
-├── assets/
-│   └── style-previews/
-└── skills/
-    └── codex-ppt/
-        ├── SKILL.md
-        ├── requirements.txt
-        ├── scripts/
-        │   ├── assemble_ppt.py
-        │   ├── codex_ppt_runtime.py
-        │   ├── image_gen.py
-        │   └── remove_chroma_key.py
-        └── references/
-            ├── 清爽专业风.md
-            ├── 创意杂志风.md
-            ├── 电子墨水杂志风.md
-            ├── 科研答辩风.md
-            ├── 手绘技术解释风.md
-            ├── 数据仪表盘风.md
-            └── ...
-```
-
 ## 安装
 
 ### Codex

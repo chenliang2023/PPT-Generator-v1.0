@@ -53,10 +53,12 @@ This skill supports two image backends:
 
 Backend selection rules:
 
+- Before recommending CLI/API fallback, actively check whether the built-in image generation tool is callable in the current environment. Do not infer availability only from the agent name or subscription context.
 - Prefer the built-in image tool when available. In Codex, this usually means the built-in `image_gen` tool. In OpenClaw, this may be `image_generate`. Resolution, quality, aspect ratio, slide-edit requests, or the user saying “use `gpt-image-2`” do not require CLI/API fallback.
 - In Codex, treat the built-in image tool as the preferred `gpt-image-2` path when it is available. If the user has a GPT subscription / Codex environment and asks for `gpt-image-2`, do not switch to `scripts/image_gen.py` only to satisfy the model name.
-- Use CLI/API fallback only when the built-in tool is unavailable, the user explicitly asks for API/CLI or a third-party OpenAI-compatible proxy, or the requested capability is unavailable in the built-in tool.
-- Before generating the first image, tell the user which backend you plan to use, why, and ask for confirmation. Do not treat being in a specific agent environment as proof that the built-in image tool is available.
+- Use CLI/API fallback only when the built-in tool is unavailable, the built-in tool failed for a required capability, the user explicitly asks for API/CLI or a third-party OpenAI-compatible proxy, or the requested capability is unavailable in the built-in tool.
+- Do not recommend CLI/API fallback merely because it provides direct `--out` file paths, easier local file management, local config reuse, batch generation convenience, or simpler automation.
+- Before generating the first image, tell the user which tool availability you checked, which backend you plan to use, why fallback is or is not needed, and ask for confirmation. Do not treat being in a specific agent environment as proof that the built-in image tool is available.
 - CLI/API fallback loads `~/.codex-ppt-skill/.env` automatically. Run the CLI normally; do not manually parse `.env` or ask for configuration before an error.
 - Ask for `OPENAI_API_KEY` configuration only after you have intentionally selected CLI/API fallback and that fallback reports missing config, after authentication/base URL/model errors, or when the user explicitly wants to change API settings. Do not mention missing `OPENAI_API_KEY` while the Codex built-in image tool is available. Configure provided values with `scripts/codex_ppt_runtime.py config --api-key`.
 - For detailed fallback setup after an error, read `docs/image-model-configuration.md`.
@@ -95,6 +97,27 @@ Transparent-background requests:
 
 ## Workflow
 
+### Mandatory Phase Gates
+
+This workflow has explicit approval gates. Do not advance to a later phase until the previous phase has been approved by the user, unless the user explicitly asks to skip that confirmation.
+
+Phase order:
+
+1. Source reading and asset extraction
+2. Outline confirmation
+3. Visual style confirmation
+4. Image backend confirmation
+5. One sample slide approval
+6. Full slide generation
+7. QA, speaker notes finalization, and PPT assembly
+
+Hard rules:
+
+- Before outline approval, do not create final `deck_spec.json`, `speech.md`, prompt job files, slide images, or `.pptx` files.
+- If you need an internal planning artifact before approval, name it with `.draft.` such as `deck_spec.draft.json` or `speech.draft.md`, and clearly report that it is not final.
+- Downstream artifacts (`deck_spec.json`, `prompts/`, `speech.md`, final slide images, and `.pptx`) should be created only after the relevant gates have been approved.
+- If the deck uses required source images, stop at outline confirmation and ask the user to verify the slide-to-image mapping before style selection or image generation.
+
 ### 1. Understand Source Content
 
 Read the user-provided content fully enough to identify:
@@ -121,6 +144,8 @@ Create a concise `outline.md` draft before generating images. For each slide, de
 Save the draft to `{base_dir}/{deck_name}/outline.md` once the project directory is known. If the output directory is not known yet, show the outline in chat first and write it to `outline.md` immediately after creating the project directory.
 
 Show the outline to the user for confirmation and wait for approval before moving to visual style selection or image generation, unless the user explicitly asked you to skip confirmation. If any slide lists required source images, explicitly ask the user to verify that each image is assigned to the correct slide and role before generation. If the user requests changes, update `outline.md` and ask for confirmation again.
+
+Stop after writing the outline draft. At this point, report the `outline.md` path, slide count, required source images and their slide mapping, and that no slide images or PPTX have been generated yet. Do not proceed to `deck_spec.json`, `speech.md`, prompt preparation, style selection, backend selection, or sample generation until the user approves the outline.
 
 If the user approved a sample slide, record that approved `slide_XX.png` path as the deck-level style reference. Later slide prompts and subagent handoffs should include it as a style-only reference so each page keeps the same palette, typography mood, density, texture, and visual identity without copying the sample's exact layout.
 
@@ -195,16 +220,16 @@ C. 数据仪表盘风：指标卡、图表感布局，适合数据密集型报�
 
 ### 4. Confirm Image Backend Before Generation
 
-Before generating any slide image, ask the user to confirm the image backend. Keep the confirmation short and concrete:
+Before generating any slide image, ask the user to confirm the image backend. First check whether a built-in image generation tool is callable. Keep the confirmation short and concrete, and include what you checked:
 
 ```text
-我准备使用内置图片生成工具生成样张：Codex 中通常是 image_gen，OpenClaw 中通常是 image_generate。当前环境可直接调用该工具，因此不会要求配置第三方 API。可以开始生成 1 页样张吗？
+我检查到当前环境可调用内置图片生成工具（Codex 通常是 image_gen，OpenClaw 通常是 image_generate），因此准备优先用内置工具生成样张，不切到本地 API/CLI fallback。可以开始生成 1 页样张吗？
 ```
 
 If using CLI/API fallback, say that explicitly and name the configured target:
 
 ```text
-我准备使用本地 API/CLI fallback 生成样张，读取 ~/.codex-ppt-skill/.env 中的 OPENAI_BASE_URL / CODEX_PPT_IMAGE_MODEL 配置。可以开始生成 1 页样张吗？
+我检查后没有可用的内置图片生成工具，或内置工具缺少本页必需能力，因此准备使用本地 API/CLI fallback 生成样张，读取 ~/.codex-ppt-skill/.env 中的 OPENAI_BASE_URL / CODEX_PPT_IMAGE_MODEL 配置。可以开始生成 1 页样张吗？
 ```
 
 Wait for confirmation before generating the sample slide. If the user questions the backend, resolve that before continuing.
@@ -301,6 +326,14 @@ Example prompt fragment for a result-figure slide:
 
 Generate one image per slide with the selected image backend. Every final `slide_XX.png` must be produced by the built-in image tool or by `scripts/image_gen.py`; programmatic rendering or hybrid text overlay is not acceptable for slide image creation.
 
+After the outline, visual style, image backend, and sample slide have all been approved, create final downstream artifacts if they do not already exist:
+
+- `deck_spec.json`
+- `prompts/slide_XX.json`
+- `speech.md`
+
+Do not create these final downstream artifacts before outline approval. If the user explicitly asks for pre-approval planning files, use `.draft.` filenames and synchronize them after approval.
+
 Before full production, create structured per-slide image jobs. Prefer the bundled deterministic helper:
 
 ```bash
@@ -386,7 +419,7 @@ If preparing prompts manually instead of using `prepare_slide_prompts.py`, still
 
 ### 7.1. Parallel Slide Generation With Subagents
 
-After the user approves the sample slide and full-deck generation is authorized, use one subagent per slide image job when subagents are available. This is the preferred full-deck generation path for decks with multiple remaining slides because each page can be generated independently while the parent keeps the deck contract centralized. It applies to both the built-in image backend and CLI/API fallback; the selected backend must stay fixed for all delegated jobs.
+After the user approves the sample slide and full-deck generation is authorized, subagents are mandatory when available: use one subagent per slide image job. Do not generate the remaining deck sequentially merely for convenience. This applies to both the built-in image backend and CLI/API fallback; the selected backend must stay fixed for all delegated jobs.
 
 Parent agent responsibilities:
 
@@ -395,7 +428,7 @@ Parent agent responsibilities:
 - Ensure the approved sample slide is included in every non-sample job as a style-only input image when available.
 - In built-in `image_gen` mode, ensure every slide-level required local source image has already been inspected with `view_image` before any delegated job that depends on it.
 - In CLI/API fallback mode, ensure each JSON job lists the required source images and that the selected CLI path can use them; if the CLI path cannot attach input images for a slide, do not delegate that slide as a text-only replacement for the asset.
-- Spawn subagents with exactly one slide job each unless the user explicitly asks for sequential generation.
+- Spawn subagents with exactly one slide job each whenever subagents are available.
 - Copy or move each selected generated output into `origin_image/slide_XX.png` after validation.
 
 Subagent responsibilities:
@@ -407,7 +440,7 @@ Subagent responsibilities:
 - Inspect the generated candidate for text quality, style consistency, required-image inclusion, and layout issues before returning it.
 - Return only the selected original generated image path and a one-sentence QA note.
 
-Subagents must not edit `outline.md`, `deck_spec.json`, other slide job files, `origin_image/`, `speech.md`, or the final `.pptx`. The parent agent alone records selected outputs and performs final assembly. If subagents are unavailable, continue sequentially only if the user has already approved sequential generation or the current environment policy permits no delegation.
+Subagents must not edit `outline.md`, `deck_spec.json`, other slide job files, `origin_image/`, `speech.md`, or the final `.pptx`. The parent agent alone records selected outputs and performs final assembly. Continue sequentially only when subagents are unavailable or the current environment policy does not permit delegation.
 
 Subagent handoff template:
 

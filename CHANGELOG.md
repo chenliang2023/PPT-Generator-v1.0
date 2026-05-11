@@ -6,6 +6,9 @@ Release notes are generated from this file. Keep changelog entries in English.
 
 ### Documentation
 
+- Add an `Attention Is All You Need` example deck with preserved paper figures.
+- Require subagent-based per-slide generation whenever subagents are available.
+- Add mandatory phase gates and stricter image backend selection rules to the codex-ppt skill.
 - Add README examples for assigning original paper figures to specific slides. (#14)
 - Document Markdown image references inside `Required images`.
 - Clarify how to preserve user-supplied figures and result charts in generated decks, including subagent slide generation with approved sample-slide style references.
