@@ -4,6 +4,8 @@ Release notes are generated from this file. Keep changelog entries in English.
 
 ## Unreleased
 
+## 0.3.0
+
 ### Documentation
 
 - Add an `Attention Is All You Need` example deck with preserved paper figures. (#18)
