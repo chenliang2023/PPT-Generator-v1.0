@@ -156,6 +156,8 @@ def _read_prompt(prompt: Optional[str], prompt_file: Optional[str]) -> str:
     if prompt and prompt_file:
         _die("Use --prompt or --prompt-file, not both.")
     if prompt_file:
+        if prompt_file == "-":
+            return sys.stdin.read().strip()
         path = Path(prompt_file)
         if not path.exists():
             _die(f"Prompt file not found: {path}")

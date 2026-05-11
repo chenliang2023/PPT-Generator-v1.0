@@ -10,6 +10,7 @@
 - 同时支持 Codex、Claude Code、OpenClaw、Hermes Agent 等多种 agent 环境
 - 支持使用第三方 OpenAI 兼容接口提供的 `gpt-image-2` 生图模型
 - 图片式 PPT：每页幻灯片是一张完整 16:9 图片，适合强视觉表达
+- 支持为某一页指定必须插入的图片素材，例如论文原图、实验结果图、截图或架构图
 - 风格参考库：内置清爽专业、科研答辩、电子墨水杂志、手绘技术解释、仪表盘等多种风格说明
 - 整套 PPT 保持统一视觉语言，但每页会按内容语义调整版式，避免机械重复
 - 本地组装脚本：将 `slide_01.png`、`slide_02.png` 等图片打包成 PowerPoint
@@ -19,6 +20,10 @@
 下面是一套技术分享 PPT 的生成效果示例。每页都是由 `gpt-image-2` 生成的完整 16:9 幻灯片图片，再由本地脚本组装为 PPTX。
 
 ![生成 PPT 效果示例](assets/slides_example.png)
+
+下面是一套论文答辩风案例，来源于论文 [Attention Is All You Need](https://arxiv.org/abs/1706.03762)。它展示了如何在指定页中插入论文原始图片作为输入素材，例如模型架构图、attention 模块图和 attention 可视化图，并围绕这些图片生成统一风格的 PPT（见 Issue #14）。
+
+![论文原图插入案例](assets/paper-figures-example.png)
 
 ## 风格示例
 
@@ -63,34 +68,6 @@
 - 科研项目申报、中期检查、结题验收和论文答辩
 - 商业汇报、产品介绍、调研总结
 - 需要强视觉统一性的图片式演示文稿
-
-## 目录结构
-
-```text
-codex-ppt-skill/
-├── README.md
-├── README_en.md
-├── LICENSE
-├── assets/
-│   └── style-previews/
-└── skills/
-    └── codex-ppt/
-        ├── SKILL.md
-        ├── requirements.txt
-        ├── scripts/
-        │   ├── assemble_ppt.py
-        │   ├── codex_ppt_runtime.py
-        │   ├── image_gen.py
-        │   └── remove_chroma_key.py
-        └── references/
-            ├── 清爽专业风.md
-            ├── 创意杂志风.md
-            ├── 电子墨水杂志风.md
-            ├── 科研答辩风.md
-            ├── 手绘技术解释风.md
-            ├── 数据仪表盘风.md
-            └── ...
-```
 
 ## 安装
 
@@ -204,6 +181,7 @@ skill 会按以下流程执行：
 - 默认脚本分辨率是 2K 16:9 横屏。如果生成的幻灯片图片比较模糊，尤其是文字较多的页面，可以让当前 agent 改用 4K 分辨率生成图片。
 - 如果只是不满意某一页的内容、排版、配色或文字表达，可以直接让当前 agent 针对这一页做细致修改，不需要整套 PPT 重新生成。
 - 你也可以上传一张喜欢的 PPT 风格截图或参考图，让当前 agent 模仿它的配色、版式、字体气质和视觉元素来生成整套 PPT。
+- 如果需要插入论文原图、实验结果图、截图或架构图，可以在大纲中指定这些图片对应的页码和用途。
 
 ## 许可证
 

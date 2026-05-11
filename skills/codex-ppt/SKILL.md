@@ -53,10 +53,12 @@ This skill supports two image backends:
 
 Backend selection rules:
 
+- Before recommending CLI/API fallback, actively check whether the built-in image generation tool is callable in the current environment. Do not infer availability only from the agent name or subscription context.
 - Prefer the built-in image tool when available. In Codex, this usually means the built-in `image_gen` tool. In OpenClaw, this may be `image_generate`. Resolution, quality, aspect ratio, slide-edit requests, or the user saying “use `gpt-image-2`” do not require CLI/API fallback.
 - In Codex, treat the built-in image tool as the preferred `gpt-image-2` path when it is available. If the user has a GPT subscription / Codex environment and asks for `gpt-image-2`, do not switch to `scripts/image_gen.py` only to satisfy the model name.
-- Use CLI/API fallback only when the built-in tool is unavailable, the user explicitly asks for API/CLI or a third-party OpenAI-compatible proxy, or the requested capability is unavailable in the built-in tool.
-- Before generating the first image, tell the user which backend you plan to use, why, and ask for confirmation. Do not treat being in a specific agent environment as proof that the built-in image tool is available.
+- Use CLI/API fallback only when the built-in tool is unavailable, the built-in tool failed for a required capability, the user explicitly asks for API/CLI or a third-party OpenAI-compatible proxy, or the requested capability is unavailable in the built-in tool.
+- Do not recommend CLI/API fallback merely because it provides direct `--out` file paths, easier local file management, local config reuse, batch generation convenience, or simpler automation.
+- Before generating the first image, tell the user which tool availability you checked, which backend you plan to use, why fallback is or is not needed, and ask for confirmation. Do not treat being in a specific agent environment as proof that the built-in image tool is available.
 - CLI/API fallback loads `~/.codex-ppt-skill/.env` automatically. Run the CLI normally; do not manually parse `.env` or ask for configuration before an error.
 - Ask for `OPENAI_API_KEY` configuration only after you have intentionally selected CLI/API fallback and that fallback reports missing config, after authentication/base URL/model errors, or when the user explicitly wants to change API settings. Do not mention missing `OPENAI_API_KEY` while the Codex built-in image tool is available. Configure provided values with `scripts/codex_ppt_runtime.py config --api-key`.
 - For detailed fallback setup after an error, read `docs/image-model-configuration.md`.
@@ -84,7 +86,6 @@ The fallback CLI supports:
 
 - `generate`: create one or more images from a prompt.
 - `edit`: edit one or more existing images, optionally with a mask.
-- `generate-batch`: generate many slide images from a JSONL prompt file.
 
 The fallback CLI defaults to 2K 16:9 landscape output, `2560x1440`, because it keeps slide text clearer while staying below the `gpt-image-2` pixel limit. For 4K landscape slides, use `--size 3840x2160 --quality high` only when the user asks for 4K, text-heavy slides need sharper output, or the default result is blurry. For portrait assets, use `--size 2160x3840` only if the user requests portrait output.
 
@@ -95,6 +96,27 @@ Transparent-background requests:
 - `gpt-image-2` does not support `--background transparent`. If the user needs true model-native transparency, ask before switching to `--model gpt-image-1.5 --background transparent --output-format png`.
 
 ## Workflow
+
+### Mandatory Phase Gates
+
+This workflow has explicit approval gates. Do not advance to a later phase until the previous phase has been approved by the user, unless the user explicitly asks to skip that confirmation.
+
+Phase order:
+
+1. Source reading and asset extraction
+2. Outline confirmation
+3. Visual style confirmation
+4. Image backend confirmation
+5. One sample slide approval
+6. Full slide generation
+7. QA, speaker notes finalization, and PPT assembly
+
+Hard rules:
+
+- Before outline approval, do not create final `deck_spec.json`, `speech.md`, prompt job files, slide images, or `.pptx` files.
+- If you need an internal planning artifact before approval, name it with `.draft.` such as `deck_spec.draft.json` or `speech.draft.md`, and clearly report that it is not final.
+- Downstream artifacts (`deck_spec.json`, `prompts/`, `speech.md`, final slide images, and `.pptx`) should be created only after the relevant gates have been approved.
+- If the deck uses required source images, stop at outline confirmation and ask the user to verify the slide-to-image mapping before style selection or image generation.
 
 ### 1. Understand Source Content
 
@@ -117,10 +139,15 @@ Create a concise `outline.md` draft before generating images. For each slide, de
 - 3-5 key points
 - Optional visual idea
 - Layout role and intent, such as cover, agenda, section divider, concept explanation, process, comparison, timeline, data evidence, architecture, case study, summary, or Q&A
+- Required source images, if any, including the image path or attachment name, its role on the slide, and whether it is a strict input asset or only a style/layout reference
 
 Save the draft to `{base_dir}/{deck_name}/outline.md` once the project directory is known. If the output directory is not known yet, show the outline in chat first and write it to `outline.md` immediately after creating the project directory.
 
-Show the outline to the user for confirmation and wait for approval before moving to visual style selection or image generation, unless the user explicitly asked you to skip confirmation. If the user requests changes, update `outline.md` and ask for confirmation again.
+Show the outline to the user for confirmation and wait for approval before moving to visual style selection or image generation, unless the user explicitly asked you to skip confirmation. If any slide lists required source images, explicitly ask the user to verify that each image is assigned to the correct slide and role before generation. If the user requests changes, update `outline.md` and ask for confirmation again.
+
+Stop after writing the outline draft. At this point, report the `outline.md` path, slide count, required source images and their slide mapping, and that no slide images or PPTX have been generated yet. Do not proceed to `deck_spec.json`, `speech.md`, prompt preparation, style selection, backend selection, or sample generation until the user approves the outline.
+
+If the user approved a sample slide, record that approved `slide_XX.png` path as the deck-level style reference. Later slide prompts and subagent handoffs should include it as a style-only reference so each page keeps the same palette, typography mood, density, texture, and visual identity without copying the sample's exact layout.
 
 Recommended structure:
 
@@ -130,6 +157,23 @@ Slide 2: Context / problem
 Slide 3-7: Main argument or sections
 Slide 8: Summary / recommendation / closing
 ```
+
+For slides that use source images, add lines like:
+
+```markdown
+Slide 5: Experiment Results
+- Key points: ...
+- Required images:
+  - Main evidence figure; strict input asset; preserve data, axes, labels, legends, colors, and values
+
+    ![Result 01](assets/figures/result_01.png)
+
+  - Supporting model architecture; strict input asset; preserve labels and arrows
+
+    ![Model Architecture](assets/figures/model_architecture.png)
+```
+
+Use Markdown image syntax inside the `Required images` list whenever the asset is local and renderable in the outline. This lets the user visually verify the exact asset mapping during outline review. Keep the descriptive text next to each image so `prepare_slide_prompts.py` can convert the same asset into structured prompt input later.
 
 ### 3. Confirm A Unified Visual Style
 
@@ -176,16 +220,16 @@ C. 数据仪表盘风：指标卡、图表感布局，适合数据密集型报�
 
 ### 4. Confirm Image Backend Before Generation
 
-Before generating any slide image, ask the user to confirm the image backend. Keep the confirmation short and concrete:
+Before generating any slide image, ask the user to confirm the image backend. First check whether a built-in image generation tool is callable. Keep the confirmation short and concrete, and include what you checked:
 
 ```text
-我准备使用内置图片生成工具生成样张：Codex 中通常是 image_gen，OpenClaw 中通常是 image_generate。当前环境可直接调用该工具，因此不会要求配置第三方 API。可以开始生成 1 页样张吗？
+我检查到当前环境可调用内置图片生成工具（Codex 通常是 image_gen，OpenClaw 通常是 image_generate），因此准备优先用内置工具生成样张，不切到本地 API/CLI fallback。可以开始生成 1 页样张吗？
 ```
 
 If using CLI/API fallback, say that explicitly and name the configured target:
 
 ```text
-我准备使用本地 API/CLI fallback 生成样张，读取 ~/.codex-ppt-skill/.env 中的 OPENAI_BASE_URL / CODEX_PPT_IMAGE_MODEL 配置。可以开始生成 1 页样张吗？
+我检查后没有可用的内置图片生成工具，或内置工具缺少本页必需能力，因此准备使用本地 API/CLI fallback 生成样张，读取 ~/.codex-ppt-skill/.env 中的 OPENAI_BASE_URL / CODEX_PPT_IMAGE_MODEL 配置。可以开始生成 1 页样张吗？
 ```
 
 Wait for confirmation before generating the sample slide. If the user questions the backend, resolve that before continuing.
@@ -228,9 +272,90 @@ You may initialize the directory structure with:
 ~/.codex-ppt-skill/.venv/bin/python {skill_root}/scripts/assemble_ppt.py {base_dir} {deck_name}.pptx --init
 ```
 
+### 6.5. Prepare User-Supplied Figures
+
+When the user provides paper figures, experiment result charts, screenshots, logos, or other assets that must appear in the deck, treat them as source assets, not as loose visual inspiration.
+
+Recommended project-local asset location:
+
+```text
+{base_dir}/{deck_name}/assets/
+├── figures/
+│   ├── result_01.png
+│   └── result_02.png
+└── logos/
+    └── lab_logo.png
+```
+
+Do not place source assets in `origin_image/`; that directory is only for final `slide_XX.png` images.
+
+For slides that must include a user-supplied figure:
+
+- Record the exact asset path or attachment name in `outline.md` for that slide, preferably as a Markdown image reference inside that slide's `Required images` list, then ask the user to confirm the mapping before generation.
+- Stay on the already selected image backend. Do not switch between built-in image generation and CLI/API fallback only because a slide includes source images.
+- Use the selected backend's reference-image or edit capability when available, with the supplied figure visible as an input image.
+- In built-in `image_gen` mode, every source image must be visible in the conversation context before generating any slide that depends on it. User attachments and images generated earlier in the thread already qualify. For local image paths, inspect each required image with `view_image` first, then generate or edit the slide.
+- In built-in `image_gen` mode, `view_image` is the required way to make local image paths visible to the conversation before generation. It is not a filename parameter to `image_gen`; the generation prompt must still label the visible image by role, such as `Image 1: strict input asset` or `Image 2: approved sample slide style reference`.
+- Ask the model to preserve the supplied figure's data, labels, axes, colors, and visual content, and only compose the surrounding slide layout, title, captions, callouts, and background.
+- Do not ask the model to "redraw", "recreate", "imagine", or "generate a similar chart" for result figures unless the user explicitly wants a stylized redraw.
+- After generation, inspect the output and ask the user to pay special attention to whether required figures were used correctly.
+
+Example prompt fragment for a result-figure slide:
+
+```json
+{
+  "source_assets": [
+    {
+      "path": "{base_dir}/{deck_name}/assets/figures/result_01.png",
+      "usage": "embed as the main evidence figure",
+      "fidelity": "preserve the figure content; do not redraw or change data, axes, labels, colors, curves, bars, or legends"
+    }
+  ],
+  "visual_elements": {
+    "main_visual": "place the supplied result_01.png as a large figure panel, with a short caption and two callouts around it"
+  },
+  "constraints": [
+    "Use the provided figure as an input image, not as a loose style reference.",
+    "Do not synthesize a replacement chart.",
+    "Keep all numerical values and labels in the supplied figure unchanged."
+  ]
+}
+```
+
 ### 7. Generate All Slide Images
 
 Generate one image per slide with the selected image backend. Every final `slide_XX.png` must be produced by the built-in image tool or by `scripts/image_gen.py`; programmatic rendering or hybrid text overlay is not acceptable for slide image creation.
+
+After the outline, visual style, image backend, and sample slide have all been approved, create final downstream artifacts if they do not already exist:
+
+- `deck_spec.json`
+- `prompts/slide_XX.json`
+- `speech.md`
+
+Do not create these final downstream artifacts before outline approval. If the user explicitly asks for pre-approval planning files, use `.draft.` filenames and synchronize them after approval.
+
+Before full production, create structured per-slide image jobs. Prefer the bundled deterministic helper:
+
+```bash
+~/.codex-ppt-skill/.venv/bin/python {skill_root}/scripts/prepare_slide_prompts.py \
+  --spec {base_dir}/{deck_name}/deck_spec.json \
+  --out-dir {base_dir}/{deck_name} \
+  --force
+```
+
+The helper writes:
+
+```text
+{base_dir}/{deck_name}/
+└── prompts/
+    ├── slide_01.json
+    ├── slide_02.json
+    └── ...
+```
+
+Each `prompts/slide_XX.json` is a self-contained slide job. It includes the slide number, title, output filename, input image list, whether context images are required, and the full prompt text. Use these JSON job files for built-in image generation, CLI/API fallback coordination, and subagent handoff. Do not create a separate job manifest unless the user explicitly asks for one.
+
+`deck_spec.json` may express `required_images` either as structured objects or as Markdown image reference strings. The helper extracts the image path from strings such as `strict input asset\n\n![Result 01](assets/figures/result_01.png)` and carries the surrounding text / alt text into the image role.
 
 Use a structured visual brief for each slide. Image generation works best when the prompt separates canvas, style, layout, text, visual elements, and constraints instead of relying only on a long style paragraph.
 
@@ -290,6 +415,60 @@ Avoid generating every slide as the same three-card layout. For each slide, choo
 }
 ```
 
+If preparing prompts manually instead of using `prepare_slide_prompts.py`, still save each full slide job under `{base_dir}/{deck_name}/prompts/slide_XX.json` before generation. The saved job must include `prompt`, `out`, and `input_images`, including any deck-level approved sample slide style reference and all slide-level source images with explicit role labels.
+
+### 7.1. Parallel Slide Generation With Subagents
+
+After the user approves the sample slide and full-deck generation is authorized, subagents are mandatory when available: use one subagent per slide image job. Do not generate the remaining deck sequentially merely for convenience. This applies to both the built-in image backend and CLI/API fallback; the selected backend must stay fixed for all delegated jobs.
+
+Parent agent responsibilities:
+
+- Own `outline.md`, `deck_spec.json`, `prompts/`, `origin_image/`, QA, `speech.md`, and final PPT assembly.
+- Run `prepare_slide_prompts.py` or otherwise write full per-slide JSON jobs before delegation.
+- Ensure the approved sample slide is included in every non-sample job as a style-only input image when available.
+- In built-in `image_gen` mode, ensure every slide-level required local source image has already been inspected with `view_image` before any delegated job that depends on it.
+- In CLI/API fallback mode, ensure each JSON job lists the required source images and that the selected CLI path can use them; if the CLI path cannot attach input images for a slide, do not delegate that slide as a text-only replacement for the asset.
+- Spawn subagents with exactly one slide job each whenever subagents are available.
+- Copy or move each selected generated output into `origin_image/slide_XX.png` after validation.
+
+Subagent responsibilities:
+
+- Read exactly the assigned `prompts/slide_XX.json`.
+- Use the selected image backend only; do not switch between built-in image generation and CLI/API fallback.
+- Treat the approved sample slide as style reference only.
+- Treat any required source images as strict input assets and preserve their content according to the prompt.
+- Inspect the generated candidate for text quality, style consistency, required-image inclusion, and layout issues before returning it.
+- Return only the selected original generated image path and a one-sentence QA note.
+
+Subagents must not edit `outline.md`, `deck_spec.json`, other slide job files, `origin_image/`, `speech.md`, or the final `.pptx`. The parent agent alone records selected outputs and performs final assembly. Continue sequentially only when subagents are unavailable or the current environment policy does not permit delegation.
+
+Subagent handoff template:
+
+```text
+Generate slide <N> for this codex-ppt deck.
+
+Deck dir: <absolute deck dir>
+Slide job file: <absolute deck dir>/prompts/slide_<NN>.json
+Output target owned by parent: <absolute deck dir>/origin_image/slide_<NN>.png
+Selected image backend: <built-in image tool OR CLI/API fallback>
+Input images already prepared by the parent:
+- <absolute path> — approved sample slide style reference; match style only, do not copy layout
+- <absolute path> — strict input asset; preserve labels/data/arrows/content
+
+Read the JSON job file, then follow its `prompt` field exactly. Use the selected image backend only.
+Do not edit slide job files, origin_image, speech.md, or assemble the PPT.
+
+Before returning, visually check:
+- Chinese text is readable and not garbled
+- style matches the approved sample slide
+- required source images are visibly included and not replaced by a similar redraw
+- no overlapping or truncated important content
+
+Return only:
+selected_source=/absolute/path/to/$CODEX_HOME/generated_images/.../ig_*.png
+qa_note=<one sentence>
+```
+
 Save images as:
 
 ```text
@@ -300,18 +479,18 @@ Save images as:
 
 After each image is generated, copy or move it into `{base_dir}/{deck_name}/origin_image/` immediately. Do not leave final slide images only in a temporary or default generated-images directory.
 
-In CLI/API fallback mode, you may generate slides one at a time or use `generate-batch`. For batch generation, create a JSONL file where each job has a distinct prompt and an `out` value such as `slide_01.png`, then run:
+In CLI/API fallback mode, generate slides one at a time from the `prompt` field in the saved `prompts/slide_XX.json` files only when the job does not require input images. This keeps the default deck directory simple and avoids maintaining a second prompt queue. `image_gen.py` accepts `--prompt-file -` to read the prompt from stdin:
 
 ```bash
-~/.codex-ppt-skill/.venv/bin/python {skill_root}/scripts/image_gen.py generate-batch \
-  --input {base_dir}/{deck_name}/image_prompts.jsonl \
-  --out-dir {base_dir}/{deck_name}/origin_image \
+python3 -c 'import json, pathlib; print(json.loads(pathlib.Path("{base_dir}/{deck_name}/prompts/slide_01.json").read_text())["prompt"])' | \
+~/.codex-ppt-skill/.venv/bin/python {skill_root}/scripts/image_gen.py generate \
+  --prompt-file - \
   --size 2560x1440 \
   --quality medium \
-  --concurrency 5
+  --out {base_dir}/{deck_name}/origin_image/slide_01.png
 ```
 
-Remove the temporary JSONL prompt file before final delivery unless the user asks to keep it.
+Before using this text-only `generate` path, inspect the assigned `prompts/slide_XX.json`. If `input_images` is non-empty or `requires_context_images` is true, the CLI command above is not sufficient because it does not attach those images. Use a selected backend/path that can pass the required images, such as the built-in image tool with the images visible in context or a CLI/API edit/image-input path that supplies every required source image. If no such path is available, stop and ask the user whether to switch backend; do not generate a text-only replacement for a strict input asset.
 
 Final slide image naming rules:
 

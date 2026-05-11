@@ -50,6 +50,7 @@ ENV/
 examples/
 !assets/
 !assets/slides_example.png
+!assets/paper-figures-example.png
 !assets/style-previews/
 !assets/style-previews/*.png
 
