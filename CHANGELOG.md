@@ -8,6 +8,10 @@ Release notes are generated from this file. Keep changelog entries in English.
 
 - Prevent concurrent slide state writes from overwriting dispatch, result, or blocker records.
 
+### Documentation
+
+- Move detailed codex-ppt workflow guidance into supporting docs and keep the main skill file within SkillHub limits.
+
 ## 0.3.2
 
 ### Documentation
