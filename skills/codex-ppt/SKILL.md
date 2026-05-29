@@ -10,16 +10,16 @@ metadata:
     envVars:
       - name: OPENAI_API_KEY
         required: false
-        description: Optional API key for local API/CLI image fallback.
+        description: API key for CLI fallback.
       - name: OPENAI_BASE_URL
         required: false
-        description: Optional OpenAI-compatible image API base URL.
+        description: API base URL.
       - name: CODEX_PPT_IMAGE_MODEL
         required: false
-        description: Optional image model name, defaults to gpt-image-2.
+        description: Image model, defaults to gpt-image-2.
       - name: CODEX_PPT_HOME
         required: false
-        description: Optional runtime home override, defaults to ~/.codex-ppt-skill.
+        description: Runtime home override.
     homepage: https://github.com/ningzimu/codex-ppt-skill
 ---
 
@@ -27,7 +27,7 @@ metadata:
 
 ## Overview
 
-This skill creates image-based PowerPoint decks from source material. Each slide is a complete 16:9 generated image containing the title, key points, and visual composition. Final images are assembled into `.pptx` with `scripts/assemble_ppt.py`.
+This skill creates image-based PowerPoint decks from source material. Each slide is a complete 16:9 generated image. Final images are assembled into `.pptx` with `scripts/assemble_ppt.py`.
 
 Use this when the user wants a visually unified presentation and accepts full-slide image pages. Do not use it when every textbox, chart, or shape must remain separately editable.
 
@@ -116,6 +116,9 @@ Do not mark a step complete from chat alone; use real files or script-recorded s
 12. Report the result.
     - Use the final report checklist in `docs/project-assembly-and-reporting.md`.
     - Include paths, slide count, backend used, recorded-result status, and any limitations or blockers.
+
+13. Save reusable styles when requested.
+    - If asked to save the current deck style or a supplied image/PDF/PPT/PPTX style, read `docs/style-library.md`.
 
 ## Subagent Dispatch
 

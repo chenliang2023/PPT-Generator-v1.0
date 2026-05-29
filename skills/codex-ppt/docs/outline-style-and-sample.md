@@ -2,6 +2,8 @@
 
 Read this before writing or updating `outline.md`, offering visual styles, using files from `references/`, or generating/approving the sample slide.
 
+If the user asks to save a finished deck style or a user-supplied image/PDF/PPT/PPTX style for future reuse, read `style-library.md`.
+
 ## Plan The Deck Outline
 
 Create a concise `outline.md` draft before generating images. For each slide, define:
@@ -49,9 +51,15 @@ Use Markdown image syntax inside the `Required images` list whenever the asset i
 
 ## Confirm A Unified Visual Style
 
-Before generating slide images, discuss the visual style with the user. Prefer a multiple-choice question: offer 2-3 concrete style directions and mark one as your recommendation.
+Before generating slide images, discuss the visual style with the user unless the user has already provided a clear style direction or reference material.
 
-Each style option should briefly specify:
+If the user has already specified a style, provided a style image, or provided a PDF/PPT/PPTX to use as style reference, do not force a 2-3 option style selection. Extract the usable style rules, briefly restate them, then proceed to backend confirmation and sample generation.
+
+For PDF/PPT/PPTX style references, do not infer the visual system from document structure, outline text, XML, file metadata, or slide object hierarchy alone. First render or export representative pages/slides into real page images, inspect those rendered images, and derive the style from what is actually visible on the pages. If the file has multiple visual sections, inspect enough representative pages to capture the shared style and any section-specific variations.
+
+When extracting style from reference material, separate content reuse from style reuse. Unless the user explicitly asks to reuse the source content, treat the provided image/PDF/PPT/PPTX as a style reference only.
+
+If the user has not provided a clear style, prefer a multiple-choice question: offer 2-3 concrete style directions and mark one as your recommendation. Each style option should briefly specify:
 
 - Color palette
 - Layout system
@@ -77,6 +85,8 @@ Available references:
 - `references/手绘技术解释风.md`
 - `references/手绘白板风.md`
 - `references/温暖手工风.md`
+
+When adding a reusable style to the library, also add its `references/{style_name}.md` file to this list.
 
 Example style confirmation:
 
