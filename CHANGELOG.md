@@ -4,6 +4,8 @@ Release notes are generated from this file. Keep changelog entries in English.
 
 ## Unreleased
 
+## 0.4.0
+
 ### Improvements
 
 - Add deck-level and slide-level context fields to slide prompt jobs so subagents receive self-contained task packets. (#39)
