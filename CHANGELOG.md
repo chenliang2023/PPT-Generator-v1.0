@@ -2,7 +2,7 @@
 
 Release notes are generated from this file. Keep changelog entries in English.
 
-## Unreleased
+## 0.4.4
 
 ### Fixes
 
