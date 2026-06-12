@@ -8,6 +8,8 @@ A Codex skill for generating PowerPoint decks. It can also be used in Claude Cod
 > This skill generates image-based PPT decks from articles, reports, outlines, or ideas. It is suitable for strong visual expression, but slide elements are not directly editable. If you need a more editable PPT, you can try converting the generated deck with [image-to-editable-ppt-skill](https://github.com/ningzimu/image-to-editable-ppt-skill).
 >
 > For a detailed introduction to `codex-ppt` and `image-to-editable-ppt`, see [skill_duo_intro.pdf](assets/skill_duo_intro.pdf). This deck was generated with the `codex-ppt` skill using the prompt: "请分别阅读 Codex PPT和 Image to Editable PPT 这两个技能的内容，然后用 Codex PPT 帮我做一个PPT吧，20页，每个技能的介绍10页。"
+>
+> For more practical notes on designing and tuning this PPT skill, see the Chinese article [2000 个 GitHub Star 换来的经验：好的 AI Skill 是调出来的，不是写出来的](https://mp.weixin.qq.com/s/LaxWBX-nogHPpSxlk-Vs8Q).
 
 > [!NOTE]
 > To see more PPT examples made by users with this skill, visit the pinned showcase issue: [欢迎分享 codex-ppt 使用案例和 PPT 效果](https://github.com/ningzimu/codex-ppt-skill/issues/34).
