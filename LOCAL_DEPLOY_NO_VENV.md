@@ -92,13 +92,13 @@ docker compose down
 启动成功后访问：
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1
 ```
 
 健康检查：
 
 ```powershell
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1/health
 ```
 
 ## 2. 备选方案：系统 Python 直接运行

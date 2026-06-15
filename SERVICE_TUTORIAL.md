@@ -24,6 +24,7 @@
 - `server/pipeline/`：文本抽取、规划、生图、组装
 - `server/Dockerfile`：镜像构建文件
 - `docker-compose.yml`：容器启动配置
+- `nginx/default.conf`：Nginx 反向代理配置
 - `.env.example`：环境变量模板
 
 任务输出目录默认是：
@@ -172,7 +173,7 @@ docker compose down
 启动后访问：
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1
 ```
 
 ## 5. 服务端启动

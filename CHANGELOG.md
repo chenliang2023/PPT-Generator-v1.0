@@ -11,6 +11,9 @@ Release notes are generated from this file. Keep changelog entries in English.
 ### Documentation
 
 - Add a service tutorial covering local startup, server deployment, API usage, and troubleshooting for the PPT microservice.
+- Add an Nginx deployment guide covering reverse proxy, HTTPS, API token usage, and troubleshooting for the PPT service.
+- Add project-level containerized Nginx deployment files and a compose override for proxy-based server deployment.
+- Merge Nginx directly into the main docker-compose deployment flow and document HTTP access through port 80.
 
 ## 0.4.4
 
