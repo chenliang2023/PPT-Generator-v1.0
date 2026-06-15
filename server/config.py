@@ -27,6 +27,7 @@ class Settings:
     image_model: str = os.getenv("IMAGE_MODEL", "gpt-image-2")
     image_size: str = os.getenv("IMAGE_SIZE", "2560x1440")
     image_quality: str = os.getenv("IMAGE_QUALITY", "medium")
+    image_output_format: str = os.getenv("IMAGE_OUTPUT_FORMAT", "").strip()
 
     max_active_jobs: int = _int_env("MAX_ACTIVE_JOBS", 1, 1, 2)
     max_image_concurrency_per_job: int = _int_env("MAX_IMAGE_CONCURRENCY_PER_JOB", 5, 2, 5)

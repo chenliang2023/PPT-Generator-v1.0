@@ -7,10 +7,12 @@ Release notes are generated from this file. Keep changelog entries in English.
 ### Features
 
 - Add a Dockerized FastAPI PPT generation service for Markdown/PDF inputs using DeepSeek planning and GPT Image slide generation.
+- Add safer image-generation fallback behavior for blocked prompts and make image output format optional for proxy compatibility.
 
 ### Documentation
 
 - Add a service tutorial covering local startup, server deployment, API usage, and troubleshooting for the PPT microservice.
+- Add a focused service test plan covering Markdown/PDF generation, automatic page counts, two style variants, language variants, downloads, and artifact checks.
 - Add an Nginx deployment guide covering reverse proxy, HTTPS, API token usage, and troubleshooting for the PPT service.
 - Add project-level containerized Nginx deployment files and a compose override for proxy-based server deployment.
 - Merge Nginx directly into the main docker-compose deployment flow and document HTTP access through port 80.

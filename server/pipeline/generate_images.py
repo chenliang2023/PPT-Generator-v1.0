@@ -5,6 +5,7 @@ import base64
 import re
 from pathlib import Path
 from typing import Optional
+from urllib.request import urlopen
 
 from openai import AsyncOpenAI
 
@@ -51,6 +52,32 @@ def _is_transient_error(exc: Exception) -> bool:
     return any(marker in name or marker in message for marker in transient_markers)
 
 
+def _is_blocked_error(exc: Exception) -> bool:
+    name = exc.__class__.__name__.lower()
+    message = str(exc).lower()
+    return (
+        "permissiondenied" in name
+        or "permission_denied" in name
+        or "blocked" in message
+        or "safety" in message
+        or "policy" in message
+    )
+
+
+def _safe_fallback_prompt(slide: SlideSpec) -> str:
+    points = "\n".join(f"- {point}" for point in slide.key_points)
+    return (
+        "Create a clean, neutral 16:9 business presentation slide. "
+        "Use a simple white or light gray background, subtle blue accents, "
+        "readable typography, and abstract geometric decorations only. "
+        "Avoid real people, brands, logos, copyrighted characters, political content, "
+        "medical content, violent content, and any sensitive imagery. "
+        "Use only the following slide text.\n\n"
+        f"Title: {slide.title}\n"
+        f"Key points:\n{points}"
+    )
+
+
 def _decode_image_b64(result: object) -> bytes:
     data = getattr(result, "data", None)
     if not data:
@@ -58,9 +85,15 @@ def _decode_image_b64(result: object) -> bytes:
 
     first = data[0]
     b64 = getattr(first, "b64_json", None)
-    if not b64:
-        raise ValueError("image API response did not include b64_json")
-    return base64.b64decode(b64)
+    if b64:
+        return base64.b64decode(b64)
+
+    url = getattr(first, "url", None)
+    if url:
+        with urlopen(url, timeout=120) as response:
+            return response.read()
+
+    raise ValueError("image API response did not include b64_json or url")
 
 
 def _validate_image(path: Path) -> None:
@@ -77,15 +110,24 @@ def _validate_image(path: Path) -> None:
         raise ValueError(f"image file cannot be opened by Pillow: {path}: {exc}") from exc
 
 
-async def _generate_slide_once(client: AsyncOpenAI, slide: SlideSpec, out_path: Path) -> None:
-    response = await client.images.generate(
-        model=settings.image_model,
-        prompt=slide.image_prompt,
-        n=1,
-        size=settings.image_size,
-        quality=settings.image_quality,
-        output_format="png",
-    )
+async def _generate_slide_once(
+    client: AsyncOpenAI,
+    slide: SlideSpec,
+    out_path: Path,
+    *,
+    prompt: str,
+) -> None:
+    payload = {
+        "model": settings.image_model,
+        "prompt": prompt,
+        "n": 1,
+        "size": settings.image_size,
+        "quality": settings.image_quality,
+    }
+    if settings.image_output_format:
+        payload["output_format"] = settings.image_output_format
+
+    response = await client.images.generate(**payload)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(_decode_image_b64(response))
     _validate_image(out_path)
@@ -99,14 +141,25 @@ async def _generate_slide_with_retries(
     out_path: Path,
 ) -> None:
     max_attempts = settings.max_image_retries + 1
+    prompt = slide.image_prompt
+    fallback_used = False
     for attempt in range(1, max_attempts + 1):
         try:
             append_log(job_id, f"slide {slide.index}: image generation attempt {attempt}/{max_attempts}")
-            await _generate_slide_once(client, slide, out_path)
+            await _generate_slide_once(client, slide, out_path, prompt=prompt)
             append_log(job_id, f"slide {slide.index}: image generated at {out_path.name}")
             return
         except Exception as exc:
             is_last = attempt >= max_attempts
+            if _is_blocked_error(exc) and not fallback_used:
+                fallback_used = True
+                prompt = _safe_fallback_prompt(slide)
+                append_log(
+                    job_id,
+                    f"slide {slide.index}: request was blocked; retrying once with safe fallback prompt",
+                )
+                continue
+
             transient = _is_transient_error(exc) or isinstance(exc, ValueError)
             append_log(
                 job_id,
