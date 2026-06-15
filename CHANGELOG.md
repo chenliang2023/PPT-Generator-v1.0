@@ -1,6 +1,12 @@
-# Changelog
+﻿# Changelog
 
 Release notes are generated from this file. Keep changelog entries in English.
+
+## Unreleased
+
+### Features
+
+- Add a Dockerized FastAPI PPT generation service for Markdown/PDF inputs using DeepSeek planning and GPT Image slide generation.
 
 ## 0.4.4
 
@@ -137,3 +143,5 @@ Release notes are generated from this file. Keep changelog entries in English.
 ### Documentation
 
 - Add installation and usage documentation. (#2)
+
+
